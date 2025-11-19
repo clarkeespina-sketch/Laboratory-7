@@ -1,45 +1,73 @@
 package com.example.laboratory7;
 
-import org.springframework.stereotype.Service;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.*;
+import java.net.URI;
+import java.util.List;
 
-@Service
-public class ProductService {
+@RestController
+@RequestMapping("/api/products")
+public class ProductController {
 
-    private Map<Long, Product> productDB = new HashMap<>();
-    private Long nextId = 4L;
+    private final ProductService service;
 
-    public ProductService() {
-        productDB.put(1L, new Product(1L, "Laptop Pro", 55000.0));
-        productDB.put(2L, new Product(2L, "Gaming Mouse", 1500.0));
-        productDB.put(3L, new Product(3L, "Mechanical Keyboard", 3200.0));
+    public ProductController(ProductService service) {
+        this.service = service;
     }
 
-    public List<Product> getAllProducts() {
-        return new ArrayList<>(productDB.values());
+    // GET ALL
+    @GetMapping
+    public ResponseEntity<List<Product>> getAll() {
+        return ResponseEntity.ok(service.getAllProducts()); // 200 OK
     }
 
-    public Product getProductById(Long id) {
-        return productDB.get(id);
-    }
+    // GET BY ID
+    @GetMapping("/{id}")
+    public ResponseEntity<Product> getById(@PathVariable Long id) {
+        Product product = service.getProductById(id);
 
-    public Product createProduct(Product product) {
-        product.setId(nextId++);
-        productDB.put(product.getId(), product);
-        return product;
-    }
-
-    public Product updateProduct(Long id, Product updated) {
-        if (productDB.containsKey(id)) {
-            updated.setId(id);
-            productDB.put(id, updated);
-            return updated;
+        if (product == null) {
+            return ResponseEntity.notFound().build(); // 404
         }
-        return null;
+
+        return ResponseEntity.ok(product); // 200
     }
 
-    public boolean deleteProduct(Long id) {
-        return productDB.remove(id) != null;
+    // POST CREATE
+    @PostMapping
+    public ResponseEntity<Product> createProduct(@RequestBody Product product) {
+        Product created = service.createProduct(product);
+
+        return ResponseEntity
+                .created(URI.create("/api/products/" + created.getId())) // 201 Created
+                .body(created);
+    }
+
+    // PUT UPDATE
+    @PutMapping("/{id}")
+    public ResponseEntity<Product> updateProduct(
+            @PathVariable Long id,
+            @RequestBody Product updated) {
+
+        Product result = service.updateProduct(id, updated);
+
+        if (result == null) {
+            return ResponseEntity.notFound().build(); // 404
+        }
+
+        return ResponseEntity.ok(result); // 200
+    }
+
+    // DELETE
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        boolean deleted = service.deleteProduct(id);
+
+        if (!deleted) {
+            return ResponseEntity.notFound().build(); // 404
+        }
+
+        return ResponseEntity.ok().build(); // 200 OK
     }
 }
